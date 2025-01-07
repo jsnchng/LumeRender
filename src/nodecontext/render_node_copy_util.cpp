@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "render_copy.h"
+#include "render_node_copy_util.h"
 
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
@@ -68,9 +68,9 @@ RenderHandle CreatePso(
 }
 } // namespace
 
-void RenderCopy::Init(IRenderNodeContextManager& renderNodeContextMgr, const CopyInfo& copyInfo)
+void RenderNodeCopyUtil::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
-    copyInfo_ = copyInfo;
+    renderNodeContextMgr_ = &renderNodeContextMgr;
     const IRenderNodeShaderManager& shaderMgr = renderNodeContextMgr.GetShaderManager();
     {
         renderData_ = {};
@@ -91,29 +91,30 @@ void RenderCopy::Init(IRenderNodeContextManager& renderNodeContextMgr, const Cop
     }
 }
 
-void RenderCopy::PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const CopyInfo& copyInfo)
+void RenderNodeCopyUtil::PreExecute() {}
+
+void RenderNodeCopyUtil::Execute(IRenderCommandList& cmdList, const CopyInfo& copyInfo)
 {
     copyInfo_ = copyInfo;
-}
 
-void RenderCopy::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList)
-{
     // extra blit from input to ouput
     if (RenderHandleUtil::IsGpuImage(copyInfo_.input.handle) && RenderHandleUtil::IsGpuImage(copyInfo_.output.handle) &&
         binder_) {
-        auto& gpuResourceMgr = renderNodeContextMgr.GetGpuResourceManager();
+        RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderCopy", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
+
+        auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
 
         auto renderPass = CreateRenderPass(gpuResourceMgr, copyInfo_.output.handle);
         RenderHandle pso;
         if (copyInfo_.copyType == CopyType::LAYER_COPY) {
             if (!RenderHandleUtil::IsValid(renderData_.psoLayer)) {
                 renderData_.psoLayer =
-                    CreatePso(renderNodeContextMgr, renderData_.shaderLayer, renderData_.pipelineLayoutLayer);
+                    CreatePso(*renderNodeContextMgr_, renderData_.shaderLayer, renderData_.pipelineLayoutLayer);
             }
             pso = renderData_.psoLayer;
         } else {
             if (!RenderHandleUtil::IsValid(renderData_.pso)) {
-                renderData_.pso = CreatePso(renderNodeContextMgr, renderData_.shader, renderData_.pipelineLayout);
+                renderData_.pso = CreatePso(*renderNodeContextMgr_, renderData_.shader, renderData_.pipelineLayout);
             }
             pso = renderData_.pso;
         }
@@ -134,7 +135,7 @@ void RenderCopy::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRende
         }
 
         // dynamic state
-        const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr.GetRenderNodeUtil();
+        const IRenderNodeUtil& renderNodeUtil = renderNodeContextMgr_->GetRenderNodeUtil();
         const ViewportDesc viewportDesc = renderNodeUtil.CreateDefaultViewport(renderPass);
         const ScissorDesc scissorDesc = renderNodeUtil.CreateDefaultScissor(renderPass);
         cmdList.SetDynamicStateViewport(viewportDesc);
@@ -155,12 +156,40 @@ void RenderCopy::Execute(IRenderNodeContextManager& renderNodeContextMgr, IRende
     }
 }
 
-DescriptorCounts RenderCopy::GetDescriptorCounts() const
+DescriptorCounts RenderNodeCopyUtil::GetRenderDescriptorCounts() const
 {
     // prepare only for a single copy operation per frame
     return DescriptorCounts { {
         { CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U },
         { CORE_DESCRIPTOR_TYPE_SAMPLER, 1U },
     } };
+}
+
+const CORE_NS::IInterface* RenderNodeCopyUtil::GetInterface(const Uid& uid) const
+{
+    if ((uid == IRenderNodeCopyUtil::UID) || (uid == IInterface::UID)) {
+        return this;
+    }
+    return nullptr;
+}
+
+CORE_NS::IInterface* RenderNodeCopyUtil::GetInterface(const Uid& uid)
+{
+    if ((uid == IRenderNodeCopyUtil::UID) || (uid == IInterface::UID)) {
+        return this;
+    }
+    return nullptr;
+}
+
+void RenderNodeCopyUtil::Ref()
+{
+    refCount_++;
+}
+
+void RenderNodeCopyUtil::Unref()
+{
+    if (--refCount_ == 0) {
+        delete this;
+    }
 }
 RENDER_END_NAMESPACE()
