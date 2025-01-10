@@ -13,41 +13,39 @@
  * limitations under the License.
  */
 
-#ifndef RENDER_RENDER__NODE__RENDER_COPY_H
-#define RENDER_RENDER__NODE__RENDER_COPY_H
+#ifndef RENDER_NODE_RENDER_NODE_COPY_UTIL_H
+#define RENDER_NODE_RENDER_NODE_COPY_UTIL_H
 
 #include <render/namespace.h>
 #include <render/nodecontext/intf_pipeline_descriptor_set_binder.h>
 #include <render/nodecontext/intf_render_node.h>
+#include <render/nodecontext/intf_render_node_copy_util.h>
 #include <render/render_data_structures.h>
 #include <render/resource_handle.h>
 
 RENDER_BEGIN_NAMESPACE()
 class IRenderCommandList;
 
-class RenderCopy final {
+class RenderNodeCopyUtil final : public IRenderNodeCopyUtil {
 public:
-    RenderCopy() = default;
-    ~RenderCopy() = default;
+    RenderNodeCopyUtil() = default;
+    ~RenderNodeCopyUtil() override = default;
 
-    enum class CopyType : uint32_t {
-        BASIC_COPY = 0,
-        LAYER_COPY = 1,
-    };
+    void Init(IRenderNodeContextManager& renderNodeContextMgr) override;
+    void PreExecute() override;
+    void Execute(IRenderCommandList& cmdList, const CopyInfo& copyInfo) override;
 
-    struct CopyInfo {
-        BindableImage input;
-        BindableImage output;
-        RenderHandle sampler; // if not given linear clamp is used
-        CopyType copyType { CopyType::BASIC_COPY };
-    };
-    void Init(IRenderNodeContextManager& renderNodeContextMgr, const CopyInfo& copyInfo);
-    void PreExecute(IRenderNodeContextManager& renderNodeContextMgr, const CopyInfo& copyInfo);
-    void Execute(IRenderNodeContextManager& renderNodeContextMgr, IRenderCommandList& cmdList);
+    DescriptorCounts GetRenderDescriptorCounts() const override;
 
-    DescriptorCounts GetDescriptorCounts() const;
+    const CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) const override;
+    CORE_NS::IInterface* GetInterface(const BASE_NS::Uid& uid) override;
+
+    void Ref() override;
+    void Unref() override;
 
 private:
+    IRenderNodeContextManager* renderNodeContextMgr_;
+
     CopyInfo copyInfo_;
     struct RenderDataHandles {
         RenderHandle shader;
@@ -62,7 +60,9 @@ private:
     RenderDataHandles renderData_;
 
     IDescriptorSetBinder::Ptr binder_;
+
+    uint32_t refCount_ { 0U };
 };
 RENDER_END_NAMESPACE()
 
-#endif // CORE__RENDER__NODE__RENDER_COPY_H
+#endif // RENDER_NODE_RENDER_NODE_COPY_UTIL_H

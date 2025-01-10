@@ -12,34 +12,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef VULKAN_LINUX_PLATFORM_VK_H
-#define VULKAN_LINUX_PLATFORM_VK_H
 
-#include <vulkan/vulkan.h>
+#ifndef RENDER_UTIL_SHADER_SAVER_H
+#define RENDER_UTIL_SHADER_SAVER_H
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
-#include <base/containers/unordered_map.h>
-#include <base/containers/vector.h>
+#include <core/json/json.h>
+#include <core/namespace.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/namespace.h>
 
-#include "vulkan/platform_hardware_buffer_util_vk.h"
-
 RENDER_BEGIN_NAMESPACE()
-class DeviceVk;
-struct PlatformDeviceExtensions {};
-struct PlatformExtFunctions {};
 
-inline void GetPlatformDeviceExtensions(BASE_NS::vector<BASE_NS::string_view>& extensions) {}
+IShaderManager::ShaderOutWriteResult SaveGraphicsState(const IShaderManager::ShaderGraphicsStateSaveInfo& saveInfo);
+IShaderManager::ShaderOutWriteResult SaveVextexInputDeclarations(
+    const IShaderManager::ShaderVertexInputDeclarationsSaveInfo& saveInfo);
+IShaderManager::ShaderOutWriteResult SavePipelineLayouts(const IShaderManager::ShaderPipelineLayoutSaveInfo& saveInfo);
+IShaderManager::ShaderOutWriteResult SaveVariants(const IShaderManager::ShaderVariantsSaveInfo& saveInfo);
 
-inline PlatformDeviceExtensions GetEnabledPlatformDeviceExtensions(
-    const BASE_NS::unordered_map<BASE_NS::string, uint32_t>& enabledDeviceExtensions)
-{
-    return {};
-}
-
-bool CanDevicePresent(VkInstance instance, VkPhysicalDevice device, uint32_t queuefamily);
-
-const char* GetPlatformSurfaceName();
 RENDER_END_NAMESPACE()
-#endif // VULKAN_LINUX_PLATFORM_VK_H
+#endif // RENDER_UTIL_SHADER_SAVER_H
