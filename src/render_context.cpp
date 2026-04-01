@@ -549,6 +549,8 @@ void RenderContext::RegisterDefaultPaths()
     // Create render:// protocol that points to embedded asset files.
     PLUGIN_LOG_D("Registered core asset path: 'rofsRndr://render/'");
     fileManager_->RegisterPath("render", "rofsRndr://render/", false);
+#else
+    fileManager_->RegisterPath("rofsRndr", "assets://render/", false);
 #endif
     for (const auto& idx : RENDER_DATA_PATHS) {
         fileManager_->RegisterPath(idx.protocol, idx.uri, false);
